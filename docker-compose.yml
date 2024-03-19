@@ -1,0 +1,90 @@
+version: "3.9"
+services:
+
+    nginx:
+        container_name: auth-nginx
+        build:
+            context: docker
+            dockerfile: development/nginx/Dockerfile
+        ports:
+            - "8081:80"
+        volumes:
+            - .:/app
+        depends_on:
+            - php-fpm
+        networks:
+            - app-network-auth
+
+    php-fpm:
+        container_name: auth-php-fpm
+        build:
+            context: docker
+            dockerfile: development/php-fpm/Dockerfile
+        environment:
+            DB_DRIVER: ${DB_DRIVER}
+            DB_HOST: ${DB_HOST}
+            DB_USER: ${DB_USER}
+            DB_PASSWORD: ${DB_PASSWORD}
+            DB_NAME: ${DB_NAME}
+            DB_CHARSET: ${DB_CHARSET}
+            JWT_ENCRYPTION_KEY: /run/secrets/jwt_encryption_key
+            JWT_PUBLIC_KEY_PATH: /run/secrets/jwt_public_key
+            JWT_PRIVATE_KEY_PATH: /run/secrets/jwt_private_key
+        volumes:
+            - .:/app
+        secrets:
+            - jwt_encryption_key
+            - jwt_public_key
+            - jwt_private_key
+        networks:
+            - app-network-auth
+
+    php-cli:
+        container_name: auth-php-cli
+        build:
+            context: docker
+            dockerfile: development/php-cli/Dockerfile
+        environment:
+            DB_DRIVER: ${DB_DRIVER}
+            DB_HOST: ${DB_HOST}
+            DB_USER: ${DB_USER}
+            DB_PASSWORD: ${DB_PASSWORD}
+            DB_NAME: ${DB_NAME}
+            DB_CHARSET: ${DB_CHARSET}
+            JWT_ENCRYPTION_KEY: /run/secrets/jwt_encryption_key
+            JWT_PUBLIC_KEY_PATH: /run/secrets/jwt_public_key
+            JWT_PRIVATE_KEY_PATH: /run/secrets/jwt_private_key
+        volumes:
+            - .:/app
+        secrets:
+            - jwt_encryption_key
+            - jwt_public_key
+            - jwt_private_key
+        networks:
+            - app-network-auth
+
+    db:
+        container_name: auth-db
+        image: mariadb
+        environment:
+            MARIADB_ROOT_PASSWORD: ${DB_PASSWORD}
+            MARIADB_DATABASE: app
+        volumes:
+            - app-mariadb:/var/lib/mysql/data
+        networks:
+            - app-network-auth
+
+volumes:
+    app-mariadb:
+
+networks:
+    app-network-auth:
+        driver: bridge
+
+secrets:
+    jwt_encryption_key:
+        file: ./docker/development/secrets/jwt_encryption_key
+    jwt_public_key:
+        file: ./docker/development/secrets/jwt_public_key
+    jwt_private_key:
+        file: ./docker/development/secrets/jwt_private_key
